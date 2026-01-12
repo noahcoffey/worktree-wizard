@@ -33,6 +33,9 @@ export function InitWizard({ onComplete }: InitWizardProps) {
   const [config, setConfig] = useState<WizardConfig>({ ...DEFAULT_CONFIG });
   const [error, setError] = useState<string | null>(null);
 
+  // Default to current working directory
+  const defaultRepoPath = process.cwd();
+
   const updateConfig = (updates: Partial<WizardConfig>) => {
     setConfig((prev) => ({ ...prev, ...updates }));
   };
@@ -109,6 +112,7 @@ export function InitWizard({ onComplete }: InitWizardProps) {
             <Text color="cyan">{'> '}</Text>
             <TextInput
               placeholder="~/projects/my-repo"
+              defaultValue={defaultRepoPath}
               onSubmit={validateRepoPath}
             />
           </Box>
