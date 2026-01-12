@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.zencoder/
+.zenflow/
+*.log
+.DS_Store

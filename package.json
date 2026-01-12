@@ -1,0 +1,29 @@
+{
+  "name": "worktree-wizard",
+  "version": "1.0.0",
+  "description": "A magical CLI for managing git worktrees with GitHub issue integration",
+  "type": "module",
+  "bin": {
+    "ww": "./bin/ww.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@inkjs/ui": "^2.0.0",
+    "@types/blessed": "^0.1.27",
+    "blessed": "^0.1.81",
+    "blessed-contrib": "^4.11.0",
+    "execa": "^9.5.2",
+    "ink": "^5.1.0",
+    "ink-box": "^1.0.0",
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/react": "^18.3.18",
+    "typescript": "^5.7.3"
+  }
+}
