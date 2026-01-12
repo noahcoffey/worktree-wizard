@@ -1,28 +1,35 @@
 /**
  * Configuration loading and saving for Worktree Wizard
+ * Configuration is stored per-repo in <repo-root>/.ww/config.json
  */
 
 import fs from 'fs/promises';
 import path from 'path';
-import os from 'os';
 import { WizardConfig, DEFAULT_CONFIG, CONFIG_VERSION } from './types.js';
 
-const CONFIG_DIR = path.join(os.homedir(), '.config', 'ww');
-const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
+const CONFIG_DIR_NAME = '.ww';
+const CONFIG_FILE_NAME = 'config.json';
 
 /**
- * Get the path to the config file
+ * Get the path to the config file for a repository
  */
-export function getConfigPath(): string {
-  return CONFIG_FILE;
+export function getConfigPath(repoRoot: string): string {
+  return path.join(repoRoot, CONFIG_DIR_NAME, CONFIG_FILE_NAME);
 }
 
 /**
- * Check if a config file exists
+ * Get the config directory path for a repository
  */
-export async function configExists(): Promise<boolean> {
+export function getConfigDir(repoRoot: string): string {
+  return path.join(repoRoot, CONFIG_DIR_NAME);
+}
+
+/**
+ * Check if a config file exists for a repository
+ */
+export async function configExists(repoRoot: string): Promise<boolean> {
   try {
-    await fs.access(CONFIG_FILE);
+    await fs.access(getConfigPath(repoRoot));
     return true;
   } catch {
     return false;
@@ -30,12 +37,13 @@ export async function configExists(): Promise<boolean> {
 }
 
 /**
- * Load configuration from disk
+ * Load configuration from disk for a repository
  * Returns null if no config exists
  */
-export async function loadConfig(): Promise<WizardConfig | null> {
+export async function loadConfig(repoRoot: string): Promise<WizardConfig | null> {
   try {
-    const content = await fs.readFile(CONFIG_FILE, 'utf-8');
+    const configPath = getConfigPath(repoRoot);
+    const content = await fs.readFile(configPath, 'utf-8');
     const config = JSON.parse(content) as WizardConfig;
     return validateConfig(config);
   } catch (error) {
@@ -47,12 +55,13 @@ export async function loadConfig(): Promise<WizardConfig | null> {
 }
 
 /**
- * Save configuration to disk
+ * Save configuration to disk for a repository
  */
-export async function saveConfig(config: WizardConfig): Promise<void> {
-  await fs.mkdir(CONFIG_DIR, { recursive: true });
+export async function saveConfig(repoRoot: string, config: WizardConfig): Promise<void> {
+  const configDir = getConfigDir(repoRoot);
+  await fs.mkdir(configDir, { recursive: true });
   const content = JSON.stringify(config, null, 2);
-  await fs.writeFile(CONFIG_FILE, content, 'utf-8');
+  await fs.writeFile(getConfigPath(repoRoot), content, 'utf-8');
 }
 
 /**
@@ -61,7 +70,6 @@ export async function saveConfig(config: WizardConfig): Promise<void> {
 export function validateConfig(config: Partial<WizardConfig>): WizardConfig {
   const validated: WizardConfig = {
     version: config.version ?? CONFIG_VERSION,
-    repositoryPath: config.repositoryPath ?? DEFAULT_CONFIG.repositoryPath,
     terminalType: config.terminalType ?? DEFAULT_CONFIG.terminalType,
     frame1: {
       enabled: config.frame1?.enabled ?? DEFAULT_CONFIG.frame1.enabled,

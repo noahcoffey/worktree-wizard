@@ -45,7 +45,10 @@ npm link
 ## Quick Start
 
 ```bash
-# Run the setup wizard
+# Navigate to your project
+cd /path/to/your/project
+
+# Run the setup wizard (first time only)
 ww init
 
 # Launch the interface
@@ -54,13 +57,14 @@ ww
 
 ## Configuration
 
-Configuration is stored at `~/.config/ww/config.json`. Run `ww init` to configure interactively.
+Configuration is stored **per-repository** at `<repo>/.ww/config.json`. Run `ww init` from within a git repository to configure.
+
+Each repository can have its own settings - just run `ww` in a new repo and it will prompt for configuration.
 
 ### Options
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `repositoryPath` | Path to your git repository | (required) |
 | `terminalType` | Terminal emulator: `iterm` or `terminal` | `iterm` |
 | `frame1.enabled` | Enable first terminal pane | `true` |
 | `frame1.command` | Command for first pane | `npm run dev` |
@@ -75,7 +79,6 @@ Configuration is stored at `~/.config/ww/config.json`. Run `ww init` to configur
 ```json
 {
   "version": 1,
-  "repositoryPath": "/Users/me/projects/my-app",
   "terminalType": "iterm",
   "frame1": {
     "enabled": true,
@@ -192,6 +195,10 @@ npm run dev
 ```
 
 ## Troubleshooting
+
+### "Not inside a git repository"
+
+Run `ww` from within a git repository directory. The tool auto-detects the repository from your current working directory.
 
 ### "GitHub CLI is not authenticated"
 

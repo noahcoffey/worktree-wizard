@@ -6,11 +6,10 @@ import React, { useState } from 'react';
 import { Box, Text } from 'ink';
 import { TextInput, Select, ConfirmInput } from '@inkjs/ui';
 import { WizardConfig, DEFAULT_CONFIG, FrameConfig } from '../config/types.js';
-import { saveConfig, isValidRepoPath, getConfigPath } from '../config/config.js';
+import { saveConfig, getConfigPath } from '../config/config.js';
 
 type SetupStep =
   | 'welcome'
-  | 'repo-path'
   | 'terminal-type'
   | 'frame1-enabled'
   | 'frame1-command'
@@ -25,16 +24,14 @@ type SetupStep =
   | 'error';
 
 interface InitWizardProps {
+  repoRoot: string;
   onComplete: () => void;
 }
 
-export function InitWizard({ onComplete }: InitWizardProps) {
+export function InitWizard({ repoRoot, onComplete }: InitWizardProps) {
   const [step, setStep] = useState<SetupStep>('welcome');
   const [config, setConfig] = useState<WizardConfig>({ ...DEFAULT_CONFIG });
   const [error, setError] = useState<string | null>(null);
-
-  // Default to current working directory
-  const defaultRepoPath = process.cwd();
 
   const updateConfig = (updates: Partial<WizardConfig>) => {
     setConfig((prev) => ({ ...prev, ...updates }));
@@ -57,23 +54,11 @@ export function InitWizard({ onComplete }: InitWizardProps) {
   const handleSave = async () => {
     setStep('saving');
     try {
-      await saveConfig(config);
+      await saveConfig(repoRoot, config);
       setStep('complete');
       setTimeout(onComplete, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save config');
-      setStep('error');
-    }
-  };
-
-  const validateRepoPath = async (repoPath: string) => {
-    const expanded = repoPath.replace(/^~/, process.env.HOME || '');
-    const valid = await isValidRepoPath(expanded);
-    if (valid) {
-      updateConfig({ repositoryPath: expanded });
-      setStep('terminal-type');
-    } else {
-      setError(`Not a valid git repository: ${expanded}`);
       setStep('error');
     }
   };
@@ -93,27 +78,14 @@ export function InitWizard({ onComplete }: InitWizardProps) {
           <Text>Welcome to Worktree Wizard!</Text>
           <Text dimColor>Let's configure your magical workspace.</Text>
           <Box marginTop={1}>
+            <Text dimColor>Repository: {repoRoot}</Text>
+          </Box>
+          <Box marginTop={1}>
             <Text>Ready to begin? </Text>
             <Text dimColor>(Y/n) </Text>
             <ConfirmInput
-              onConfirm={() => setStep('repo-path')}
+              onConfirm={() => setStep('terminal-type')}
               onCancel={onComplete}
-            />
-          </Box>
-        </Box>
-      )}
-
-      {/* Repository Path */}
-      {step === 'repo-path' && (
-        <Box flexDirection="column">
-          <Text>Enter the path to your git repository:</Text>
-          <Text dimColor>(This is the repo where worktrees will be created)</Text>
-          <Box marginTop={1}>
-            <Text color="cyan">{'> '}</Text>
-            <TextInput
-              placeholder="~/projects/my-repo"
-              defaultValue={defaultRepoPath}
-              onSubmit={validateRepoPath}
             />
           </Box>
         </Box>
@@ -292,7 +264,7 @@ export function InitWizard({ onComplete }: InitWizardProps) {
           <Text bold>Configuration Summary:</Text>
           <Box marginTop={1} flexDirection="column">
             <Text>
-              <Text dimColor>Repository:</Text> {config.repositoryPath}
+              <Text dimColor>Repository:</Text> {repoRoot}
             </Text>
             <Text>
               <Text dimColor>Terminal:</Text> {config.terminalType}
@@ -339,7 +311,7 @@ export function InitWizard({ onComplete }: InitWizardProps) {
       {step === 'complete' && (
         <Box flexDirection="column">
           <Text color="green">✓ Configuration saved!</Text>
-          <Text dimColor>Config file: {getConfigPath()}</Text>
+          <Text dimColor>Config file: {getConfigPath(repoRoot)}</Text>
           <Text dimColor>Run 'ww' to start the wizard.</Text>
         </Box>
       )}
@@ -354,7 +326,7 @@ export function InitWizard({ onComplete }: InitWizardProps) {
             <ConfirmInput
               onConfirm={() => {
                 setError(null);
-                setStep('repo-path');
+                setStep('terminal-type');
               }}
               onCancel={onComplete}
             />

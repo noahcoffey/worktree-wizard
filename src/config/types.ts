@@ -9,7 +9,6 @@ export interface FrameConfig {
 
 export interface WizardConfig {
   version: number;
-  repositoryPath: string;
   terminalType: 'iterm' | 'terminal';
   frame1: FrameConfig;
   frame2: FrameConfig;
@@ -20,7 +19,6 @@ export interface WizardConfig {
 
 export const DEFAULT_CONFIG: WizardConfig = {
   version: 1,
-  repositoryPath: '',
   terminalType: 'iterm',
   frame1: {
     enabled: true,

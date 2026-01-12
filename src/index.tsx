@@ -5,7 +5,7 @@ import { InitWizard } from './commands/init.js';
 import { checkDependencies } from './utils/exec.js';
 import { loadConfig, configExists, getConfigPath } from './config/config.js';
 import { WizardConfig } from './config/types.js';
-import { setRepoRoot } from './utils/paths.js';
+import { getRepoRoot } from './utils/paths.js';
 import { runApp } from './ui/index.js';
 
 interface ParsedArgs {
@@ -38,25 +38,25 @@ A magical CLI for managing git worktrees
 Usage: ww [command] [options]
 
 Commands:
-  init                 Run the setup wizard to configure Worktree Wizard
+  init                 Run the setup wizard to configure this repository
 
 Options:
   -h, --help           Show this help message
 
 Examples:
-  ww init              Configure Worktree Wizard
+  ww init              Configure Worktree Wizard for current repo
   ww                   Launch the wizard interface
 
 Configuration:
-  Config file: ~/.config/ww/config.json
-  Run 'ww init' to create or update configuration.
+  Config is stored per-repo at: <repo>/.ww/config.json
+  Run 'ww init' from within a git repo to configure.
 `);
 }
 
-async function runInit() {
+async function runInit(repoRoot: string) {
   process.stdout.write('\x1b[2J\x1b[H');
   const { waitUntilExit } = render(
-    <InitWizard onComplete={() => process.exit(0)} />
+    <InitWizard repoRoot={repoRoot} onComplete={() => process.exit(0)} />
   );
   await waitUntilExit();
 }
@@ -119,41 +119,42 @@ async function main() {
     process.exit(0);
   }
 
-  if (init) {
-    await runInit();
-    return;
-  }
-
-  // Load configuration
-  const hasConfig = await configExists();
-  if (!hasConfig) {
-    console.log('✧ Welcome to Worktree Wizard! ✧');
-    console.log('');
-    console.log('No configuration found. Running setup wizard...');
-    console.log('');
-    await runInit();
-    return;
-  }
-
-  const config = await loadConfig();
-  if (!config) {
-    console.error('Error: Failed to load configuration');
-    console.error(`Config file: ${getConfigPath()}`);
-    console.error('Run "ww init" to reconfigure.');
+  // Auto-detect repository root from current directory
+  let repoRoot: string;
+  try {
+    repoRoot = await getRepoRoot();
+  } catch {
+    console.error('Error: Not inside a git repository.');
+    console.error('');
+    console.error('Run ww from within a git repository.');
     process.exit(1);
   }
 
-  if (!config.repositoryPath) {
-    console.error('Error: No repository path configured');
-    console.error('Run "ww init" to configure your repository.');
+  // Check for repo-specific config
+  const hasConfig = await configExists(repoRoot);
+
+  if (init || !hasConfig) {
+    if (!hasConfig) {
+      console.log('✧ Welcome to Worktree Wizard! ✧');
+      console.log('');
+      console.log('No configuration found for this repository.');
+      console.log('Running setup wizard...');
+      console.log('');
+    }
+    await runInit(repoRoot);
+    return;
+  }
+
+  const config = await loadConfig(repoRoot);
+  if (!config) {
+    console.error('Error: Failed to load configuration');
+    console.error(`Config file: ${getConfigPath(repoRoot)}`);
+    console.error('Run "ww init" to reconfigure.');
     process.exit(1);
   }
 
   // Check required dependencies based on config
   await checkRequiredDependencies(config);
-
-  // Set the repository root from config
-  setRepoRoot(config.repositoryPath);
 
   // Run the blessed-based app
   await runApp(config);

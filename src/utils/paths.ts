@@ -4,15 +4,8 @@ import { execOrThrow } from './exec.js';
 let cachedRepoRoot: string | null = null;
 
 /**
- * Set the repository root path (from config)
- */
-export function setRepoRoot(repoPath: string): void {
-  cachedRepoRoot = repoPath;
-}
-
-/**
  * Get the root directory of the main git repository
- * If set via config, returns that. Otherwise detects from git.
+ * Auto-detects from current directory using git rev-parse
  */
 export async function getRepoRoot(): Promise<string> {
   if (cachedRepoRoot) {
