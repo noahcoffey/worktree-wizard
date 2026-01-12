@@ -45,21 +45,19 @@ npm link
 ## Quick Start
 
 ```bash
-# Navigate to your project
+# Navigate to your project and run
 cd /path/to/your/project
-
-# Run the setup wizard (first time only)
-ww init
-
-# Launch the interface
 ww
 ```
 
+On first run, the setup wizard will guide you through configuration. After that, `ww` launches directly into the interface.
+
 ## Configuration
 
-Configuration is stored **per-repository** at `<repo>/.ww/config.json`. Run `ww init` from within a git repository to configure.
+Configuration is stored **per-repository** at `<repo>/.ww/config.json`. Each repository can have its own settings.
 
-Each repository can have its own settings - just run `ww` in a new repo and it will prompt for configuration.
+- First run in a repo automatically triggers the setup wizard
+- Use `ww init` to reconfigure an existing repo
 
 ### Options
 
