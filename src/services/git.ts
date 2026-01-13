@@ -24,8 +24,9 @@ export async function listWorktrees(): Promise<Worktree[]> {
 
 /**
  * Parse the porcelain output from git worktree list
+ * @internal Exported for testing
  */
-function parseWorktreeOutput(output: string): Worktree[] {
+export function parseWorktreeOutput(output: string): Worktree[] {
   const worktrees: Worktree[] = [];
   const lines = output.trim().split('\n');
 
@@ -213,8 +214,9 @@ export async function pruneWorktrees(): Promise<void> {
 
 /**
  * Clean up git error messages for better UX
+ * @internal Exported for testing
  */
-function cleanGitError(message: string): string {
+export function cleanGitError(message: string): string {
   let cleaned = message.replace(/^fatal:\s*/i, '').trim();
 
   // Make common lock/unlock errors more user-friendly
