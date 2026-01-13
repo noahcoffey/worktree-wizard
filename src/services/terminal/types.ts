@@ -64,11 +64,16 @@ export function buildFrames(
   return frames;
 }
 
+// Consistent truncation length for terminal tab titles
+const TAB_TITLE_MAX_LENGTH = 30;
+
 /**
  * Get the tab title for an issue worktree
  */
 export function getTabTitle(issueNumber: number, issueTitle: string): string {
-  const truncatedTitle = issueTitle.length > 30 ? issueTitle.slice(0, 30) + '...' : issueTitle;
+  const truncatedTitle = issueTitle.length > TAB_TITLE_MAX_LENGTH
+    ? issueTitle.slice(0, TAB_TITLE_MAX_LENGTH) + '...'
+    : issueTitle;
   return `#${issueNumber}: ${truncatedTitle}`;
 }
 
@@ -76,7 +81,9 @@ export function getTabTitle(issueNumber: number, issueTitle: string): string {
  * Get the tab title for a custom worktree
  */
 export function getCustomTabTitle(branchName: string): string {
-  const truncatedName = branchName.length > 35 ? branchName.slice(0, 35) + '...' : branchName;
+  const truncatedName = branchName.length > TAB_TITLE_MAX_LENGTH
+    ? branchName.slice(0, TAB_TITLE_MAX_LENGTH) + '...'
+    : branchName;
   return `✧ ${truncatedName}`;
 }
 
