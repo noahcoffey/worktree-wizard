@@ -131,7 +131,7 @@ export function createStatsPanel(options: StatsOptions): StatsPanel {
     left: 0,
     width: 12,
     height: 1,
-    content: '{#6a9fb5-fg}ISSUES{/}',
+    content: `{${COLORS.info}-fg}ISSUES{/}`,
     tags: true,
   });
 
@@ -163,7 +163,7 @@ export function createStatsPanel(options: StatsOptions): StatsPanel {
     left: 22,
     width: 12,
     height: 1,
-    content: '{#90a959-fg}ACTIVE{/}',
+    content: `{${COLORS.active}-fg}ACTIVE{/}`,
     tags: true,
   });
 
@@ -178,8 +178,8 @@ export function createStatsPanel(options: StatsOptions): StatsPanel {
   });
 
   const update = (issueCount: number, worktreeCount: number) => {
-    const issueLines = renderBigNumber(issueCount, '#6a9fb5');
-    const worktreeLines = renderBigNumber(worktreeCount, '#90a959');
+    const issueLines = renderBigNumber(issueCount, COLORS.info);
+    const worktreeLines = renderBigNumber(worktreeCount, COLORS.active);
 
     issueNum.setContent(issueLines.join('\n'));
     worktreeNum.setContent(worktreeLines.join('\n'));
