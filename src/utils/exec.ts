@@ -27,6 +27,16 @@ export async function exec(
       reject: false,
       timeout,
     });
+
+    // Check for timeout (with reject: false, timedOut is on result, not error)
+    if (result.timedOut) {
+      return {
+        stdout: '',
+        stderr: `Command timed out after ${timeout}ms: ${command} ${args.join(' ')}`,
+        exitCode: 124, // Standard timeout exit code
+      };
+    }
+
     return {
       stdout: result.stdout,
       stderr: result.stderr,
@@ -34,15 +44,6 @@ export async function exec(
     };
   } catch (error) {
     const execaError = error as ExecaError;
-
-    // Check for timeout
-    if (execaError.timedOut) {
-      return {
-        stdout: '',
-        stderr: `Command timed out after ${timeout}ms: ${command} ${args.join(' ')}`,
-        exitCode: 124, // Standard timeout exit code
-      };
-    }
 
     return {
       stdout: String(execaError.stdout ?? ''),
