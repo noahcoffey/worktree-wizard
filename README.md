@@ -1,5 +1,7 @@
 # Worktree Wizard
 
+[![Test](https://github.com/noahcoffey/worktree-wizard/actions/workflows/test.yml/badge.svg)](https://github.com/noahcoffey/worktree-wizard/actions/workflows/test.yml)
+
 A terminal UI for managing git worktrees with GitHub issue integration.
 
 ```
@@ -190,6 +192,15 @@ npm run dev
 
 # Run locally
 ./bin/ww.js
+
+# Run tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
 ```
 
 ## Troubleshooting
