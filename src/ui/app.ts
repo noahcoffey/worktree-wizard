@@ -21,16 +21,21 @@ import { Worktree } from '../services/git.js';
 import { setupWorktree } from '../services/setup.js';
 import { getTerminalAdapter, buildFrames, getTabTitle, getCustomTabTitle, buildIssuePrompt } from '../services/terminal/index.js';
 
+// Layout constants - exported for consistency across components
+export const LAYOUT = {
+  HEADER_HEIGHT: 5,      // ASCII title (4 lines) + tagline (1 line)
+  STATS_HEIGHT: 4,       // Big number display (3 lines) + label (1 line)
+  DIVIDER_HEIGHT: 1,
+} as const;
+
 export async function runApp(config: WizardConfig): Promise<void> {
   const { screen } = createScreen(config);
 
-  // Layout positions - accommodate larger header and stats
-  const HEADER_HEIGHT = 5;
-  const DIVIDER1_TOP = HEADER_HEIGHT;
-  const STATS_TOP = DIVIDER1_TOP + 1;
-  const STATS_HEIGHT = 4;
-  const DIVIDER2_TOP = STATS_TOP + STATS_HEIGHT;
-  const LIST_TOP = DIVIDER2_TOP + 1;
+  // Calculate layout positions from constants
+  const DIVIDER1_TOP = LAYOUT.HEADER_HEIGHT;
+  const STATS_TOP = DIVIDER1_TOP + LAYOUT.DIVIDER_HEIGHT;
+  const DIVIDER2_TOP = STATS_TOP + LAYOUT.STATS_HEIGHT;
+  const LIST_TOP = DIVIDER2_TOP + LAYOUT.DIVIDER_HEIGHT;
 
   // Create UI components
   createHeader({ parent: screen });
@@ -403,6 +408,4 @@ export async function runApp(config: WizardConfig): Promise<void> {
     await refreshData();
     render(screen);
   });
-
-  render(screen);
 }

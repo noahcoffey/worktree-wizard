@@ -20,6 +20,10 @@ export interface GitHubIssue {
   url: string;
 }
 
+// Maximum number of issues to fetch from GitHub
+// Higher values may slow down the UI but show more issues
+const ISSUE_FETCH_LIMIT = 100;
+
 /**
  * Safely parse JSON with error handling
  */
@@ -46,7 +50,7 @@ export async function fetchOpenIssues(): Promise<GitHubIssue[]> {
     '--json',
     'number,title,body,labels,assignees,state,url',
     '--limit',
-    '50',
+    String(ISSUE_FETCH_LIMIT),
   ], { cwd: repoRoot });
 
   if (!stdout.trim()) {
