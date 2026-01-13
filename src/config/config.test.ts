@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { validateConfig, isValidRepoPath, getConfigPath, getConfigDir } from './config.js';
-import { DEFAULT_CONFIG } from './types.js';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { validateConfig, isValidRepoPath, getConfigPath, getConfigDir, configExists, loadConfig, saveConfig } from './config.js';
+import { DEFAULT_CONFIG, WizardConfig } from './types.js';
 import fs from 'fs/promises';
 
 // Mock fs/promises
@@ -149,5 +149,111 @@ describe('isValidRepoPath', () => {
 
     const result = await isValidRepoPath('');
     expect(result).toBe(false);
+  });
+});
+
+describe('configExists', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns true when config file exists', async () => {
+    vi.mocked(fs.access).mockResolvedValue(undefined);
+
+    const result = await configExists('/path/to/repo');
+    expect(result).toBe(true);
+    expect(fs.access).toHaveBeenCalledWith('/path/to/repo/.ww/config.json');
+  });
+
+  it('returns false when config file does not exist', async () => {
+    vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'));
+
+    const result = await configExists('/path/to/repo');
+    expect(result).toBe(false);
+  });
+});
+
+describe('loadConfig', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns validated config when file exists', async () => {
+    const savedConfig = {
+      version: 1,
+      terminalType: 'terminal',
+      frame1: { enabled: true, command: 'npm start' },
+      frame2: { enabled: false, command: 'claude' },
+      defaultAICommand: 'claude',
+      setupCommands: ['npm install'],
+      githubIssuesEnabled: true,
+    };
+    vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify(savedConfig));
+
+    const result = await loadConfig('/path/to/repo');
+    expect(result).toEqual(savedConfig);
+    expect(fs.readFile).toHaveBeenCalledWith('/path/to/repo/.ww/config.json', 'utf-8');
+  });
+
+  it('returns null when config file does not exist', async () => {
+    const error = new Error('ENOENT') as NodeJS.ErrnoException;
+    error.code = 'ENOENT';
+    vi.mocked(fs.readFile).mockRejectedValue(error);
+
+    const result = await loadConfig('/path/to/repo');
+    expect(result).toBeNull();
+  });
+
+  it('throws on other errors', async () => {
+    const error = new Error('Permission denied') as NodeJS.ErrnoException;
+    error.code = 'EACCES';
+    vi.mocked(fs.readFile).mockRejectedValue(error);
+
+    await expect(loadConfig('/path/to/repo')).rejects.toThrow('Permission denied');
+  });
+
+  it('validates and fills missing config values', async () => {
+    vi.mocked(fs.readFile).mockResolvedValue(JSON.stringify({ terminalType: 'iterm' }));
+
+    const result = await loadConfig('/path/to/repo');
+    expect(result).not.toBeNull();
+    expect(result!.terminalType).toBe('iterm');
+    expect(result!.frame1).toEqual(DEFAULT_CONFIG.frame1);
+    expect(result!.setupCommands).toEqual(DEFAULT_CONFIG.setupCommands);
+  });
+});
+
+describe('saveConfig', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('creates config directory and writes file', async () => {
+    vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+    vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+
+    const config: WizardConfig = {
+      ...DEFAULT_CONFIG,
+      terminalType: 'terminal',
+    };
+
+    await saveConfig('/path/to/repo', config);
+
+    expect(fs.mkdir).toHaveBeenCalledWith('/path/to/repo/.ww', { recursive: true });
+    expect(fs.writeFile).toHaveBeenCalledWith(
+      '/path/to/repo/.ww/config.json',
+      expect.any(String),
+      'utf-8'
+    );
+  });
+
+  it('writes formatted JSON', async () => {
+    vi.mocked(fs.mkdir).mockResolvedValue(undefined);
+    vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+
+    await saveConfig('/path/to/repo', DEFAULT_CONFIG);
+
+    const writtenContent = vi.mocked(fs.writeFile).mock.calls[0][1] as string;
+    expect(writtenContent).toBe(JSON.stringify(DEFAULT_CONFIG, null, 2));
   });
 });

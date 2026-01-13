@@ -1,5 +1,36 @@
-import { describe, it, expect } from 'vitest';
-import { parseWorktreeOutput, cleanGitError, Worktree } from './git.js';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import {
+  parseWorktreeOutput,
+  cleanGitError,
+  listWorktrees,
+  createWorktree,
+  removeWorktree,
+  isBranchMerged,
+  deleteBranch,
+  forceDeleteBranch,
+  getCurrentBranch,
+  getDefaultBranch,
+  hasUncommittedChanges,
+  pruneWorktrees,
+  lockWorktree,
+  unlockWorktree,
+  moveWorktree,
+  repairWorktree,
+  createCustomWorktree,
+} from './git.js';
+import { exec, execOrThrow } from '../utils/exec.js';
+import { getRepoRoot, getWorktreePath } from '../utils/paths.js';
+
+// Mock dependencies
+vi.mock('../utils/exec.js', () => ({
+  exec: vi.fn(),
+  execOrThrow: vi.fn(),
+}));
+
+vi.mock('../utils/paths.js', () => ({
+  getRepoRoot: vi.fn(),
+  getWorktreePath: vi.fn(),
+}));
 
 describe('parseWorktreeOutput', () => {
   it('returns empty array for empty output', () => {
@@ -264,5 +295,393 @@ describe('cleanGitError', () => {
   it('handles only fatal: prefix', () => {
     expect(cleanGitError('fatal:')).toBe('');
     expect(cleanGitError('fatal:  ')).toBe('');
+  });
+});
+
+describe('listWorktrees', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getRepoRoot).mockResolvedValue('/repo');
+  });
+
+  it('returns parsed worktrees from git output', async () => {
+    vi.mocked(execOrThrow).mockResolvedValue(`worktree /repo
+HEAD abc123
+branch refs/heads/main
+
+`);
+
+    const result = await listWorktrees();
+
+    expect(result).toHaveLength(1);
+    expect(result[0].branch).toBe('main');
+    expect(execOrThrow).toHaveBeenCalledWith('git', ['worktree', 'list', '--porcelain'], { cwd: '/repo' });
+  });
+});
+
+describe('createWorktree', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getRepoRoot).mockResolvedValue('/repo');
+    vi.mocked(getWorktreePath).mockResolvedValue('/repo-issue-42-feature');
+  });
+
+  it('creates worktree with correct branch name', async () => {
+    vi.mocked(execOrThrow).mockResolvedValue('');
+
+    const result = await createWorktree(42, 'Add feature');
+
+    expect(result.path).toBe('/repo-issue-42-feature');
+    expect(result.branch).toBe('issue-42-add-feature');
+    expect(execOrThrow).toHaveBeenCalledWith(
+      'git',
+      ['worktree', 'add', '-b', 'issue-42-add-feature', '/repo-issue-42-feature', 'main'],
+      { cwd: '/repo' }
+    );
+  });
+
+  it('uses custom base branch', async () => {
+    vi.mocked(execOrThrow).mockResolvedValue('');
+
+    await createWorktree(1, 'Test', 'develop');
+
+    expect(execOrThrow).toHaveBeenCalledWith(
+      'git',
+      expect.arrayContaining(['develop']),
+      expect.any(Object)
+    );
+  });
+});
+
+describe('removeWorktree', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getRepoRoot).mockResolvedValue('/repo');
+  });
+
+  it('removes worktree with force flag', async () => {
+    vi.mocked(execOrThrow).mockResolvedValue('');
+
+    await removeWorktree('/path/to/worktree');
+
+    expect(execOrThrow).toHaveBeenCalledWith(
+      'git',
+      ['worktree', 'remove', '/path/to/worktree', '--force'],
+      { cwd: '/repo' }
+    );
+  });
+});
+
+describe('isBranchMerged', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getRepoRoot).mockResolvedValue('/repo');
+  });
+
+  it('returns true when branch is merged', async () => {
+    vi.mocked(exec)
+      .mockResolvedValueOnce({ stdout: 'abc123', stderr: '', exitCode: 0 }) // branch exists
+      .mockResolvedValueOnce({ stdout: '  main\n  feature-branch\n', stderr: '', exitCode: 0 }); // merged branches
+
+    const result = await isBranchMerged('feature-branch');
+
+    expect(result).toBe(true);
+  });
+
+  it('returns false when branch is not merged', async () => {
+    vi.mocked(exec)
+      .mockResolvedValueOnce({ stdout: 'abc123', stderr: '', exitCode: 0 })
+      .mockResolvedValueOnce({ stdout: '  main\n', stderr: '', exitCode: 0 });
+
+    const result = await isBranchMerged('unmerged-branch');
+
+    expect(result).toBe(false);
+  });
+
+  it('returns false when branch does not exist', async () => {
+    vi.mocked(exec).mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 1 });
+
+    const result = await isBranchMerged('nonexistent');
+
+    expect(result).toBe(false);
+  });
+
+  it('returns false when git branch --merged fails', async () => {
+    vi.mocked(exec)
+      .mockResolvedValueOnce({ stdout: 'abc123', stderr: '', exitCode: 0 })
+      .mockResolvedValueOnce({ stdout: '', stderr: 'error', exitCode: 1 });
+
+    const result = await isBranchMerged('feature');
+
+    expect(result).toBe(false);
+  });
+});
+
+describe('deleteBranch', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getRepoRoot).mockResolvedValue('/repo');
+  });
+
+  it('deletes branch with -d flag', async () => {
+    vi.mocked(execOrThrow).mockResolvedValue('');
+
+    await deleteBranch('feature-branch');
+
+    expect(execOrThrow).toHaveBeenCalledWith('git', ['branch', '-d', 'feature-branch'], { cwd: '/repo' });
+  });
+});
+
+describe('forceDeleteBranch', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getRepoRoot).mockResolvedValue('/repo');
+  });
+
+  it('deletes branch with -D flag', async () => {
+    vi.mocked(execOrThrow).mockResolvedValue('');
+
+    await forceDeleteBranch('feature-branch');
+
+    expect(execOrThrow).toHaveBeenCalledWith('git', ['branch', '-D', 'feature-branch'], { cwd: '/repo' });
+  });
+});
+
+describe('getCurrentBranch', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getRepoRoot).mockResolvedValue('/repo');
+  });
+
+  it('returns trimmed branch name', async () => {
+    vi.mocked(execOrThrow).mockResolvedValue('main\n');
+
+    const result = await getCurrentBranch();
+
+    expect(result).toBe('main');
+    expect(execOrThrow).toHaveBeenCalledWith('git', ['branch', '--show-current'], { cwd: '/repo' });
+  });
+});
+
+describe('getDefaultBranch', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getRepoRoot).mockResolvedValue('/repo');
+  });
+
+  it('returns branch from remote HEAD', async () => {
+    vi.mocked(exec).mockResolvedValueOnce({
+      stdout: 'refs/remotes/origin/main',
+      stderr: '',
+      exitCode: 0,
+    });
+
+    const result = await getDefaultBranch();
+
+    expect(result).toBe('main');
+  });
+
+  it('falls back to main when remote HEAD fails', async () => {
+    vi.mocked(exec)
+      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 1 }) // remote HEAD fails
+      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 0 }); // main exists
+
+    const result = await getDefaultBranch();
+
+    expect(result).toBe('main');
+  });
+
+  it('falls back to master when main does not exist', async () => {
+    vi.mocked(exec)
+      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 1 }) // remote HEAD fails
+      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 1 }) // main doesn't exist
+      .mockResolvedValueOnce({ stdout: '', stderr: '', exitCode: 0 }); // master exists
+
+    const result = await getDefaultBranch();
+
+    expect(result).toBe('master');
+  });
+
+  it('returns main as last resort with warning', async () => {
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.mocked(exec).mockResolvedValue({ stdout: '', stderr: '', exitCode: 1 });
+
+    const result = await getDefaultBranch();
+
+    expect(result).toBe('main');
+    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Could not detect default branch'));
+    consoleSpy.mockRestore();
+  });
+});
+
+describe('hasUncommittedChanges', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns true when there are changes', async () => {
+    vi.mocked(exec).mockResolvedValue({
+      stdout: ' M file.txt\n',
+      stderr: '',
+      exitCode: 0,
+    });
+
+    const result = await hasUncommittedChanges('/worktree');
+
+    expect(result).toBe(true);
+    expect(exec).toHaveBeenCalledWith('git', ['status', '--porcelain'], { cwd: '/worktree' });
+  });
+
+  it('returns false when working tree is clean', async () => {
+    vi.mocked(exec).mockResolvedValue({
+      stdout: '',
+      stderr: '',
+      exitCode: 0,
+    });
+
+    const result = await hasUncommittedChanges('/worktree');
+
+    expect(result).toBe(false);
+  });
+});
+
+describe('pruneWorktrees', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getRepoRoot).mockResolvedValue('/repo');
+  });
+
+  it('calls git worktree prune', async () => {
+    vi.mocked(execOrThrow).mockResolvedValue('');
+
+    await pruneWorktrees();
+
+    expect(execOrThrow).toHaveBeenCalledWith('git', ['worktree', 'prune'], { cwd: '/repo' });
+  });
+});
+
+describe('lockWorktree', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getRepoRoot).mockResolvedValue('/repo');
+  });
+
+  it('locks worktree without reason', async () => {
+    vi.mocked(execOrThrow).mockResolvedValue('');
+
+    await lockWorktree('/path/to/worktree');
+
+    expect(execOrThrow).toHaveBeenCalledWith('git', ['worktree', 'lock', '/path/to/worktree'], { cwd: '/repo' });
+  });
+
+  it('locks worktree with reason', async () => {
+    vi.mocked(execOrThrow).mockResolvedValue('');
+
+    await lockWorktree('/path/to/worktree', 'Work in progress');
+
+    expect(execOrThrow).toHaveBeenCalledWith(
+      'git',
+      ['worktree', 'lock', '/path/to/worktree', '--reason', 'Work in progress'],
+      { cwd: '/repo' }
+    );
+  });
+
+  it('throws cleaned error on failure', async () => {
+    vi.mocked(execOrThrow).mockRejectedValue(new Error("fatal: '/path' is already locked"));
+
+    await expect(lockWorktree('/path')).rejects.toThrow('Worktree is already locked');
+  });
+});
+
+describe('unlockWorktree', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getRepoRoot).mockResolvedValue('/repo');
+  });
+
+  it('unlocks worktree', async () => {
+    vi.mocked(execOrThrow).mockResolvedValue('');
+
+    await unlockWorktree('/path/to/worktree');
+
+    expect(execOrThrow).toHaveBeenCalledWith('git', ['worktree', 'unlock', '/path/to/worktree'], { cwd: '/repo' });
+  });
+
+  it('throws cleaned error on failure', async () => {
+    vi.mocked(execOrThrow).mockRejectedValue(new Error("fatal: '/path' is not locked"));
+
+    await expect(unlockWorktree('/path')).rejects.toThrow('Worktree is not locked');
+  });
+});
+
+describe('moveWorktree', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getRepoRoot).mockResolvedValue('/repo');
+  });
+
+  it('moves worktree to new path', async () => {
+    vi.mocked(execOrThrow).mockResolvedValue('');
+
+    await moveWorktree('/old/path', '/new/path');
+
+    expect(execOrThrow).toHaveBeenCalledWith('git', ['worktree', 'move', '/old/path', '/new/path'], { cwd: '/repo' });
+  });
+});
+
+describe('repairWorktree', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getRepoRoot).mockResolvedValue('/repo');
+  });
+
+  it('repairs all worktrees when no path provided', async () => {
+    vi.mocked(execOrThrow).mockResolvedValue('');
+
+    await repairWorktree();
+
+    expect(execOrThrow).toHaveBeenCalledWith('git', ['worktree', 'repair'], { cwd: '/repo' });
+  });
+
+  it('repairs specific worktree when path provided', async () => {
+    vi.mocked(execOrThrow).mockResolvedValue('');
+
+    await repairWorktree('/path/to/worktree');
+
+    expect(execOrThrow).toHaveBeenCalledWith('git', ['worktree', 'repair', '/path/to/worktree'], { cwd: '/repo' });
+  });
+});
+
+describe('createCustomWorktree', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getRepoRoot).mockResolvedValue('/repo');
+    vi.mocked(getWorktreePath).mockResolvedValue('/repo-custom-branch');
+  });
+
+  it('creates custom worktree with branch name', async () => {
+    vi.mocked(execOrThrow).mockResolvedValue('');
+
+    const result = await createCustomWorktree('custom-branch');
+
+    expect(result.path).toBe('/repo-custom-branch');
+    expect(result.branch).toBe('custom-branch');
+    expect(execOrThrow).toHaveBeenCalledWith(
+      'git',
+      ['worktree', 'add', '-b', 'custom-branch', '/repo-custom-branch', 'main'],
+      { cwd: '/repo' }
+    );
+  });
+
+  it('uses custom base branch', async () => {
+    vi.mocked(execOrThrow).mockResolvedValue('');
+
+    await createCustomWorktree('feature', 'develop');
+
+    expect(execOrThrow).toHaveBeenCalledWith(
+      'git',
+      ['worktree', 'add', '-b', 'feature', '/repo-custom-branch', 'develop'],
+      { cwd: '/repo' }
+    );
   });
 });
