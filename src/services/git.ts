@@ -127,6 +127,13 @@ export async function isBranchMerged(
   baseBranch: string = 'main'
 ): Promise<boolean> {
   const repoRoot = await getRepoRoot();
+
+  // First verify the branch exists to avoid false negatives
+  const branchCheck = await exec('git', ['rev-parse', '--verify', branchName], { cwd: repoRoot });
+  if (branchCheck.exitCode !== 0) {
+    return false; // Branch doesn't exist, treat as not merged
+  }
+
   const result = await exec('git', ['branch', '--merged', baseBranch], { cwd: repoRoot });
   if (result.exitCode !== 0) {
     return false;
@@ -165,12 +172,25 @@ export async function getCurrentBranch(): Promise<string> {
  */
 export async function getDefaultBranch(): Promise<string> {
   const repoRoot = await getRepoRoot();
-  // Try to get from remote
+
+  // Try to get from remote HEAD reference
   const result = await exec('git', ['symbolic-ref', 'refs/remotes/origin/HEAD'], { cwd: repoRoot });
   if (result.exitCode === 0) {
     return result.stdout.trim().replace('refs/remotes/origin/', '');
   }
-  // Fallback to main
+
+  // Fallback: check which common default branch exists locally
+  const mainCheck = await exec('git', ['rev-parse', '--verify', 'main'], { cwd: repoRoot });
+  if (mainCheck.exitCode === 0) {
+    return 'main';
+  }
+
+  const masterCheck = await exec('git', ['rev-parse', '--verify', 'master'], { cwd: repoRoot });
+  if (masterCheck.exitCode === 0) {
+    return 'master';
+  }
+
+  // Last resort fallback
   return 'main';
 }
 
