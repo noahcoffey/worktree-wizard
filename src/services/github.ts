@@ -21,6 +21,18 @@ export interface GitHubIssue {
 }
 
 /**
+ * Safely parse JSON with error handling
+ */
+function parseJSON<T>(json: string, context: string): T {
+  try {
+    return JSON.parse(json);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Failed to parse ${context} response: ${message}`);
+  }
+}
+
+/**
  * Fetch open issues from the GitHub repository
  */
 export async function fetchOpenIssues(): Promise<GitHubIssue[]> {
@@ -41,7 +53,7 @@ export async function fetchOpenIssues(): Promise<GitHubIssue[]> {
     return [];
   }
 
-  return JSON.parse(stdout);
+  return parseJSON<GitHubIssue[]>(stdout, 'GitHub issues');
 }
 
 /**
@@ -58,7 +70,7 @@ export async function fetchIssue(issueNumber: number): Promise<GitHubIssue | nul
       '--json',
       'number,title,body,labels,assignees,state,url',
     ], { cwd: repoRoot });
-    return JSON.parse(stdout);
+    return parseJSON<GitHubIssue>(stdout, `GitHub issue #${issueNumber}`);
   } catch {
     return null;
   }

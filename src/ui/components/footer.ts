@@ -2,14 +2,7 @@
  * Footer/status bar component - Clean style
  */
 import blessed from 'blessed';
-
-const COLORS = {
-  border: '#5f5f5f',
-  text: '#d0d0d0',
-  muted: '#808080',
-  info: '#6a9fb5',
-  error: '#ac4142',
-};
+import { COLORS } from '../colors.js';
 
 export interface FooterOptions {
   parent: blessed.Widgets.Node;
