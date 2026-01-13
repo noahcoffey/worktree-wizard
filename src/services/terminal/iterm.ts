@@ -77,7 +77,14 @@ export class ITermAdapter implements TerminalAdapter {
   }
 
   private escapeForAppleScript(str: string): string {
-    return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+    // Comprehensive escaping for AppleScript string literals
+    // Order matters: escape backslashes first, then other characters
+    return str
+      .replace(/\\/g, '\\\\')  // Backslashes
+      .replace(/"/g, '\\"')    // Double quotes
+      .replace(/\n/g, '\\n')   // Newlines
+      .replace(/\r/g, '\\r')   // Carriage returns
+      .replace(/\t/g, '\\t');  // Tabs
   }
 
   private escapeForShell(str: string): string {

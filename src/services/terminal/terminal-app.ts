@@ -43,8 +43,18 @@ export class TerminalAppAdapter implements TerminalAdapter {
     return true;
   }
 
+  private escapeForAppleScript(str: string): string {
+    // Comprehensive escaping for AppleScript string literals
+    return str
+      .replace(/\\/g, '\\\\')  // Backslashes
+      .replace(/"/g, '\\"')    // Double quotes
+      .replace(/\n/g, '\\n')   // Newlines
+      .replace(/\r/g, '\\r')   // Carriage returns
+      .replace(/\t/g, '\\t');  // Tabs
+  }
+
   async closeByTitle(title: string): Promise<boolean> {
-    const escapedTitle = title.replace(/"/g, '\\"');
+    const escapedTitle = this.escapeForAppleScript(title);
 
     const script = `
       tell application "Terminal"
@@ -68,7 +78,7 @@ export class TerminalAppAdapter implements TerminalAdapter {
     title: string
   ): Promise<boolean> {
     const escapedDir = directory.replace(/'/g, "'\\''");
-    const escapedTitle = title.replace(/"/g, '\\"');
+    const escapedTitle = this.escapeForAppleScript(title);
 
     let commandStr = `cd '${escapedDir}'`;
     if (command) {
@@ -79,7 +89,7 @@ export class TerminalAppAdapter implements TerminalAdapter {
     const script = `
       tell application "Terminal"
         activate
-        do script "${commandStr.replace(/"/g, '\\"')}"
+        do script "${this.escapeForAppleScript(commandStr)}"
         set custom title of front window to "${escapedTitle}"
       end tell
     `;

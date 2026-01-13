@@ -38,15 +38,14 @@ export async function setupWorktree(
 
 /**
  * Run a single command in the worktree directory
+ * Uses shell execution to properly handle quoted arguments and shell features
  */
 async function runCommand(worktreePath: string, command: string): Promise<void> {
-  // Split command into parts (simple space-based split)
-  // For more complex commands, users can use shell wrappers
-  const parts = command.split(/\s+/);
-  const cmd = parts[0];
-  const args = parts.slice(1);
-
-  const result = await exec(cmd, args, {
+  // Execute through shell to properly handle:
+  // - Quoted arguments (e.g., npm install "package name")
+  // - Shell operators (&&, ||, |)
+  // - Environment variable expansion
+  const result = await exec('sh', ['-c', command], {
     cwd: worktreePath,
   });
 
