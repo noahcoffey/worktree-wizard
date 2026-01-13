@@ -4,19 +4,7 @@
 import blessed from 'blessed';
 import { ListItem } from './split-list.js';
 import { WizardConfig } from '../../config/types.js';
-
-// Softer color palette
-const COLORS = {
-  border: '#5f5f5f',
-  borderActive: '#5f87af',
-  label: '#af875f',
-  text: '#d0d0d0',
-  muted: '#808080',
-  success: '#90a959',
-  error: '#ac4142',
-  warning: '#f4bf75',
-  info: '#6a9fb5',
-};
+import { COLORS } from '../colors.js';
 
 export type DetailAction =
   | 'summon'

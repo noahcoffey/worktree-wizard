@@ -1,20 +1,31 @@
 import { execa, ExecaError } from 'execa';
 
+// Default timeout: 30 seconds
+const DEFAULT_TIMEOUT_MS = 30000;
+
 export interface ExecResult {
   stdout: string;
   stderr: string;
   exitCode: number;
 }
 
+export interface ExecOptions {
+  cwd?: string;
+  timeout?: number;
+}
+
 export async function exec(
   command: string,
   args: string[],
-  options: { cwd?: string } = {}
+  options: ExecOptions = {}
 ): Promise<ExecResult> {
+  const { cwd, timeout = DEFAULT_TIMEOUT_MS } = options;
+
   try {
     const result = await execa(command, args, {
-      cwd: options.cwd,
+      cwd,
       reject: false,
+      timeout,
     });
     return {
       stdout: result.stdout,
@@ -23,6 +34,16 @@ export async function exec(
     };
   } catch (error) {
     const execaError = error as ExecaError;
+
+    // Check for timeout
+    if (execaError.timedOut) {
+      return {
+        stdout: '',
+        stderr: `Command timed out after ${timeout}ms: ${command} ${args.join(' ')}`,
+        exitCode: 124, // Standard timeout exit code
+      };
+    }
+
     return {
       stdout: String(execaError.stdout ?? ''),
       stderr: String(execaError.stderr ?? execaError.message),
@@ -34,7 +55,7 @@ export async function exec(
 export async function execOrThrow(
   command: string,
   args: string[],
-  options: { cwd?: string } = {}
+  options: ExecOptions = {}
 ): Promise<string> {
   const result = await exec(command, args, options);
   if (result.exitCode !== 0) {

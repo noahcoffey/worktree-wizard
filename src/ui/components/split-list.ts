@@ -4,6 +4,7 @@
 import blessed from 'blessed';
 import { Worktree } from '../../services/git.js';
 import { GitHubIssue } from '../../services/github.js';
+import { COLORS } from '../colors.js';
 
 export interface ListItem {
   id: string;
@@ -28,18 +29,6 @@ export interface SplitListResult {
   focusIssues: () => void;
   focusWorktrees: () => void;
 }
-
-// Color palette - softer, muted tones
-const COLORS = {
-  border: '#5f5f5f',
-  label: '#af875f',
-  selected: '#5f87af',
-  active: '#90a959',
-  inactive: '#6c6c6c',
-  text: '#d0d0d0',
-  muted: '#808080',
-  locked: '#ac4142',
-};
 
 export function createSplitList(options: SplitListOptions): SplitListResult {
   const { parent, top, onSelect } = options;

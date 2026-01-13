@@ -2,12 +2,13 @@
  * Header component - Large ASCII title with big stats
  */
 import blessed from 'blessed';
+import { COLORS } from '../colors.js';
 
 // Figlet "small" style title - 4 lines
 const TITLE_ART = [
-  '{#5f87af-fg}╦ ╦┌─┐┬─┐┬┌─┌┬┐┬─┐┌─┐┌─┐{/}  {#af875f-fg}╦ ╦┬┌─┐┌─┐┬─┐┌┬┐{/}',
-  '{#5f87af-fg}║║║│ │├┬┘├┴┐ │ ├┬┘├┤ ├┤ {/}  {#af875f-fg}║║║│┌─┘├─┤├┬┘ ││{/}',
-  '{#5f87af-fg}╚╩╝└─┘┴└─┴ ┴ ┴ ┴└─└─┘└─┘{/}  {#af875f-fg}╚╩╝┴└─┘┴ ┴┴└──┴┘{/}',
+  `{${COLORS.title}-fg}╦ ╦┌─┐┬─┐┬┌─┌┬┐┬─┐┌─┐┌─┐{/}  {${COLORS.titleAccent}-fg}╦ ╦┬┌─┐┌─┐┬─┐┌┬┐{/}`,
+  `{${COLORS.title}-fg}║║║│ │├┬┘├┴┐ │ ├┬┘├┤ ├┤ {/}  {${COLORS.titleAccent}-fg}║║║│┌─┘├─┤├┬┘ ││{/}`,
+  `{${COLORS.title}-fg}╚╩╝└─┘┴└─┴ ┴ ┴ ┴└─└─┘└─┘{/}  {${COLORS.titleAccent}-fg}╚╩╝┴└─┘┴ ┴┴└──┴┘{/}`,
 ];
 
 // Big block digits for stats (3 lines tall)
@@ -80,7 +81,7 @@ export function createHeader(options: HeaderOptions): blessed.Widgets.BoxElement
     left: 3,
     width: 30,
     height: 1,
-    content: '{#666666-fg}Git worktree manager{/}',
+    content: `{${COLORS.tagline}-fg}Git worktree manager{/}`,
     tags: true,
   });
 
@@ -95,7 +96,7 @@ export function createDivider(parent: blessed.Widgets.Node, top: number): blesse
     left: 0,
     width: '100%',
     height: 1,
-    content: '{#444444-fg}' + '─'.repeat(120) + '{/}',
+    content: `{${COLORS.divider}-fg}${'─'.repeat(120)}{/}`,
     tags: true,
   });
 }
@@ -151,7 +152,7 @@ export function createStatsPanel(options: StatsOptions): StatsPanel {
     left: 18,
     width: 1,
     height: 4,
-    content: '{#444444-fg}│\n│\n│\n│{/}',
+    content: `{${COLORS.divider}-fg}│\n│\n│\n│{/}`,
     tags: true,
   });
 
