@@ -89,7 +89,7 @@ export class TerminalAppAdapter implements TerminalAdapter {
     const script = `
       tell application "Terminal"
         activate
-        do script "${commandStr.replace(/"/g, '\\"')}"
+        do script "${this.escapeForAppleScript(commandStr)}"
         set custom title of front window to "${escapedTitle}"
       end tell
     `;

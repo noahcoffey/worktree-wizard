@@ -190,7 +190,8 @@ export async function getDefaultBranch(): Promise<string> {
     return 'master';
   }
 
-  // Last resort fallback
+  // Last resort fallback - neither main nor master exists locally
+  console.warn('Warning: Could not detect default branch, falling back to "main"');
   return 'main';
 }
 
